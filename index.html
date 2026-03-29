@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>edge-tts — Microsoft Edge 在线文本转语音</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0f14;
+      --bg-elevated: #141821;
+      --bg-card: #1a1f2b;
+      --fg: #e8eaf0;
+      --fg-muted: #8b90a0;
+      --accent: #00c9a7;
+      --accent-dim: rgba(0, 201, 167, 0.12);
+      --accent-glow: rgba(0, 201, 167, 0.25);
+      --border: rgba(255, 255, 255, 0.06);
+      --code-bg: #111520;
+      --code-border: rgba(0, 201, 167, 0.2);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --font-display: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+      --font-body: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* 背景网格纹理 */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 顶部渐变光晕 */
+    .hero-glow {
+      position: absolute;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: glowPulse 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes glowPulse {
+      0% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0.8; transform: translateX(-50%) scale(1.15); }
+    }
+
+    /* 导航栏 */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(12, 15, 20, 0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .nav-logo .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--fg); }
+
+    .nav-links a.active { color: var(--accent); }
+
+    /* Hero 区 */
+    .hero {
+      position: relative;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 2rem 4rem;
+      overflow: hidden;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(0, 201, 167, 0.2);
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 2rem;
+      animation: fadeSlideUp 0.6s ease-out both;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      animation: fadeSlideUp 0.6s 0.1s ease-out both;
+    }
+
+    .hero h1 .accent { color: var(--accent); }
+
+    .hero p {
+      max-width: 600px;
+      font-size: 1.15rem;
+      color: var(--fg-muted);
+      line-height: 1.8;
+      margin-bottom: 2.5rem;
+      animation: fadeSlideUp 0.6s 0.2s ease-out both;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeSlideUp 0.6s 0.3s ease-out both;
+    }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 按钮 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      border-radius: 100px;
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0c0f14;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--accent-glow);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    /* 特性卡片行 */
+    .features-row {
+      display: flex;
+      gap: 1px;
+      margin-top: 4rem;
+      animation: fadeSlideUp 0.6s 0.4s ease-out both;
+    }
+
+    .feature-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+      white-space: nowrap;
+    }
+
+    .feature-chip:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+    .feature-chip:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+
+    .feature-chip svg { color: var(--accent); flex-shrink: 0; }
+
+    /* 通用 Section */
+    section {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+
+    .section-label {
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--fg-muted);
+      font-size: 1.05rem;
+      max-width: 620px;
+      line-height: 1.8;
+      margin-bottom: 3rem;
+    }
+
+    /* 代码块 */
+    .code-block {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-header span {
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+      font-family: var(--font-display);
+    }
+
+    .code-copy {
+      background: none;
+      border: none;
+      color: var(--fg-muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.2s;
+    }
+
+    .code-copy:hover { color: var(--accent); }
+
+    .code-block pre {
+      padding: 20px 24px;
+      overflow-x: auto;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    }
+
+    .code-block code { color: var(--fg); }
+
+    .code-block .comment { color: #5c6370; font-style: italic; }
+    .code-block .cmd { color: var(--accent); }
+    .code-block .flag { color: #c678dd; }
+    .code-block .val { color: #e5c07b; }
+    .code-block .str { color: #98c379; }
+
+    /* 安装区 */
+    .install-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .install-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color 0.3s;
+    }
+
+    .install-card:hover { border-color: rgba(0,201,167,0.3); }
+
+    .install-card h3 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .install-card h3 .icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--accent-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+
+    .install-card p {
+      font-size: 0.88rem;
+      color: var(--fg-muted);
+      margin-bottom: 1rem;
+    }
+
+    /* 功能特性 Bento Grid */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: auto auto;
+      gap: 1rem;
+    }
+
+    .bento-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      transition: border-color 0.3s, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .bento-card:hover {
+      border-color: rgba(0,201,167,0.25);
+      transform: translateY(-3px);
+    }
+
+    .bento-card.wide { grid-column: span 2; }
+    .bento-card.tall { grid-row: span 2; display: flex; flex-direction: column; }
+
+    .bento-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--accent-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.2rem;
+      color: var(--accent);
+    }
+
+    .bento-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+    }
+
+    .bento-card p {
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+      line-height: 1.7;
+    }
+
+    .bento-card .voice-table {
+      flex: 1;
+      margin-top: 1rem;
+      overflow-x: auto;
+    }
+
+    .voice-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .voice-table th {
+      text-align: left;
+      padding: 8px 12px;
+      color: var(--fg-muted);
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .voice-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .voice-table tr:last-child td { border-bottom: none; }
+
+    .voice-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .voice-tag.female { background: rgba(236, 72, 153, 0.12); color: #f472b6; }
+    .voice-tag.male { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+
+    /* 命令参数卡 */
+    .params-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .param-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .param-card:hover {
+      border-color: rgba(0,201,167,0.25);
+      transform: translateY(-2px);
+    }
+
+    .param-flag {
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+    }
+
+    .param-desc {
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      line-height: 1.6;
+    }
+
+    .param-example {
+      margin-top: 0.8rem;
+      padding: 8px 12px;
+      background: var(--code-bg);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: var(--fg-muted);
+    }
+
+    /* 项目链接 */
+    .project-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .project-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.2rem 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      color: var(--fg);
+      transition: all 0.25s;
+    }
+
+    .project-item:hover {
+      border-color: rgba(0,201,167,0.3);
+      background: rgba(0,201,167,0.04);
+      transform: translateX(4px);
+    }
+
+    .project-item .arrow {
+      color: var(--accent);
+      flex-shrink: 0;
+      transition: transform 0.25s;
+    }
+
+    .project-item:hover .arrow { transform: translateX(4px); }
+
+    .project-item h4 {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .project-item p {
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+    }
+
+    /* SSML 提示卡 */
+    .notice-card {
+      background: rgba(234, 179, 8, 0.06);
+      border: 1px solid rgba(234, 179, 8, 0.15);
+      border-radius: var(--radius);
+      padding: 1.5rem 2rem;
+    }
+
+    .notice-card h3 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .notice-card p {
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+      line-height: 1.8;
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+
+    footer p {
+      color: var(--fg-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    /* 滚动动画 */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+
+      section { padding: 3rem 1.2rem; }
+
+      .install-grid { grid-template-columns: 1fr; }
+
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+      .bento-card.wide, .bento-card.tall {
+        grid-column: span 1;
+        grid-row: span 1;
+      }
+
+      .params-grid { grid-template-columns: 1fr; }
+
+      .features-row { flex-wrap: wrap; }
+      .feature-chip:first-child { border-radius: var(--radius-sm) 0 0 0; }
+      .feature-chip:last-child { border-radius: 0 var(--radius-sm) 0 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 导航 -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <span class="dot"></span>
+      edge-tts
+    </a>
+    <ul class="nav-links">
+      <li><a href="#install" class="active">安装</a></li>
+      <li><a href="#usage">用法</a></li>
+      <li><a href="#voices">语音</a></li>
+      <li><a href="#python">Python</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      免费开源 · 无需 API 密钥
+    </div>
+    <h1>用 Python 访问<br>Edge <span class="accent">语音合成</span></h1>
+    <p>基于 Microsoft Edge 在线文本转语音服务的 Python 模块，无需安装 Edge 浏览器、Windows 系统或任何 API 密钥，即可将文本转换为高质量语音。</p>
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        快速安装
+      </a>
+      <a href="https://github.com/rany2/edge-tts" target="_blank" class="btn btn-ghost">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+    </div>
+    <div class="features-row">
+      <div class="feature-chip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        无需 API Key
+      </div>
+      <div class="feature-chip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        无需 Windows
+      </div>
+      <div class="feature-chip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        命令行 + Python 双模式
+      </div>
+      <div class="feature-chip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        支持 400+ 语音
+      </div>
+    </div>
+  </header>
+
+  <!-- 安装 -->
+  <section id="install">
+    <div class="reveal">
+      <span class="section-label">快速开始</span>
+      <h2 class="section-title">安装</h2>
+      <p class="section-desc">只需一行命令，即可在你的项目中使用 edge-tts。</p>
+    </div>
+    <div class="install-grid reveal">
+      <div class="install-card">
+        <h3>
+          <span class="icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </span>
+          pip 安装
+        </h3>
+        <p>标准方式，安装后可直接在 Python 代码中导入使用。</p>
+        <div class="code-block">
+          <div class="code-header">
+            <span>Terminal</span>
+            <button class="code-copy" onclick="copyCode(this)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              复制
+            </button>
+          </div>
+          <pre><code><span class="cmd">$</span> pip install edge-tts</code></pre>
+        </div>
+      </div>
+      <div class="install-card">
+        <h3>
+          <span class="icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </span>
+          pipx 安装
+        </h3>
+        <p>仅使用命令行工具的推荐方式，隔离环境更干净。</p>
+        <div class="code-block">
+          <div class="code-header">
+            <span>Terminal</span>
+            <button class="code-copy" onclick="copyCode(this)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              复制
+            </button>
+          </div>
+          <pre><code><span class="cmd">$</span> pipx install edge-tts</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 用法 -->
+  <section id="usage">
+    <div class="reveal">
+      <span class="section-label">使用指南</span>
+      <h2 class="section-title">基本用法</h2>
+      <p class="section-desc">使用 edge-tts 命令行工具，将任意文本转换为语音文件和字幕文件。</p>
+    </div>
+
+    <div class="reveal">
+      <h3 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; margin-bottom: 1rem;">文本转语音</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span>Terminal</span>
+          <button class="code-copy" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制
+          </button>
+        </div>
+        <pre><code><span class="cmd">$</span> edge-tts <span class="flag">--text</span> <span class="str">"Hello, world!"</span> <span class="flag">--write-media</span> hello.mp3 <span class="flag">--write-subtitles</span> hello.srt</code></pre>
+      </div>
+    </div>
+
+    <div class="reveal">
+      <h3 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; margin-bottom: 1rem;">即时播放</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span>Terminal</span>
+          <button class="code-copy" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制
+          </button>
+        </div>
+        <pre><code><span class="cmd">$</span> edge-playback <span class="flag">--text</span> <span class="str">"Hello, world!"</span></code></pre>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--fg-muted); margin-top: -0.5rem; margin-bottom: 2rem;">
+        注意：除 Windows 系统外，edge-playback 需要安装 <a href="https://mpv.io/" style="color: var(--accent); text-decoration: none;">mpv 播放器</a>。
+      </p>
+    </div>
+
+    <!-- 调整参数 -->
+    <div class="reveal">
+      <span class="section-label">进阶控制</span>
+      <h2 class="section-title">调整语速、音量和音高</h2>
+      <p class="section-desc">通过命令行参数精确控制语音输出效果。使用负值时请写成 <code style="background:var(--code-bg);padding:2px 6px;border-radius:4px;font-size:0.85rem;">--rate=-50%</code> 的形式。</p>
+    </div>
+
+    <div class="params-grid reveal">
+      <div class="param-card">
+        <div class="param-flag">--rate</div>
+        <div class="param-desc">调整语音语速</div>
+        <div class="param-example">--rate=-50%</div>
+      </div>
+      <div class="param-card">
+        <div class="param-flag">--volume</div>
+        <div class="param-desc">调整语音音量</div>
+        <div class="param-example">--volume=-50%</div>
+      </div>
+      <div class="param-card">
+        <div class="param-flag">--pitch</div>
+        <div class="param-desc">调整语音音高</div>
+        <div class="param-example">--pitch=-50Hz</div>
+      </div>
+    </div>
+
+    <div class="reveal" style="margin-top: 1.5rem;">
+      <div class="code-block">
+        <div class="code-header">
+          <span>Terminal</span>
+          <button class="code-copy" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制
+          </button>
+        </div>
+        <pre><code><span class="comment"># 降低语速</span>
+<span class="cmd">$</span> edge-tts <span class="flag">--rate=-50%</span> <span class="flag">--text</span> <span class="str">"Hello, world!"</span> <span class="flag">--write-media</span> slow.mp3 <span class="flag">--write-subtitles</span> slow.srt
+
+<span class="comment"># 降低音量</span>
+<span class="cmd">$</span> edge-tts <span class="flag">--volume=-50%</span> <span class="flag">--text</span> <span class="str">"Hello, world!"</span> <span class="flag">--write-media</span> quiet.mp3 <span class="flag">--write-subtitles</span> quiet.srt
+
+<span class="comment"># 降低音高</span>
+<span class="cmd">$</span> edge-tts <span class="flag">--pitch=-50Hz</span> <span class="flag">--text</span> <span class="str">"Hello, world!"</span> <span class="flag">--write-media</span> low.mp3 <span class="flag">--write-subtitles</span> low.srt</code></pre>
+      </div>
+    </div>
+
+    <!-- SSML 提示 -->
+    <div class="notice-card reveal" style="margin-top: 2rem;">
+      <h3>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        关于自定义 SSML
+      </h3>
+      <p>自定义 SSML 支持已被移除，因为 Microsoft 会阻止使用任何非 Edge 自身生成的 SSML。该服务仅允许一个 <code style="background:var(--code-bg);padding:2px 6px;border-radius:4px;">&lt;voice&gt;</code> 标签内包含一个 <code style="background:var(--code-bg);padding:2px 6px;border-radius:4px;">&lt;prosody&gt;</code> 标签，相关自定义选项已全部在本库的命令行参数中提供。</p>
+    </div>
+  </section>
+
+  <!-- 语音列表 -->
+  <section id="voices">
+    <div class="reveal">
+      <span class="section-label">多语言支持</span>
+      <h2 class="section-title">丰富的语音库</h2>
+      <p class="section-desc">支持 400 多种语音，覆盖 75+ 种语言和地区，使用 --list-voices 查看完整列表。</p>
+    </div>
+
+    <div class="bento-grid reveal">
+      <div class="bento-card wide">
+        <div class="bento-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </div>
+        <h3>语音示例</h3>
+        <p>以下列出部分可用语音。使用 --voice 参数指定语音。</p>
+        <div class="voice-table">
+          <table>
+            <thead>
+              <tr>
+                <th>语音名称</th>
+                <th>语言</th>
+                <th>性别</th>
+                <th>风格</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-family:monospace;font-size:0.82rem;color:var(--accent);">af-ZA-AdriNeural</td>
+                <td>南非荷兰语</td>
+                <td><span class="voice-tag female">女</span></td>
+                <td style="color:var(--fg-muted);font-size:0.82rem;">友好, 积极</td>
+              </tr>
+              <tr>
+                <td style="font-family:monospace;font-size:0.82rem;color:var(--accent);">ar-EG-SalmaNeural</td>
+                <td>阿拉伯语 (埃及)</td>
+                <td><span class="voice-tag female">女</span></td>
+                <td style="color:var(--fg-muted);font-size:0.82rem;">友好, 积极</td>
+              </tr>
+              <tr>
+                <td style="font-family:monospace;font-size:0.82rem;color:var(--accent);">ar-AE-HamdanNeural</td>
+                <td>阿拉伯语 (阿联酋)</td>
+                <td><span class="voice-tag male">男</span></td>
+                <td style="color:var(--fg-muted);font-size:0.82rem;">友好, 积极</td>
+              </tr>
+              <tr>
+                <td style="font-family:monospace;font-size:0.82rem;color:var(--accent);">am-ET-AmehaNeural</td>
+                <td>阿姆哈拉语</td>
+                <td><span class="voice-tag male">男</span></td>
+                <td style="color:var(--fg-muted);font-size:0.82rem;">友好, 积极</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bento-card tall">
+        <div class="bento-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <h3>查看全部语音</h3>
+        <p>运行以下命令获取完整的语音列表，包括名称、性别、内容类别和语音风格。</p>
+        <div class="code-block" style="margin-top: 1rem;">
+          <div class="code-header">
+            <span>Terminal</span>
+            <button class="code-copy" onclick="copyCode(this)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              复制
+            </button>
+          </div>
+          <pre><code><span class="cmd">$</span> edge-tts <span class="flag">--list-voices</span></code></pre>
+        </div>
+        <p style="font-size: 0.88rem; color: var(--fg-muted); margin-top: 1rem;">输出包含语音名称、性别、内容类别和语音个性特征等详细信息。</p>
+      </div>
+      <div class="bento-card">
+        <div class="bento-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <h3>多语言示例</h3>
+        <p>选择不同语言和地区的语音，轻松生成本地化内容。</p>
+      </div>
+      <div class="bento-card">
+        <div class="bento-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h3>输出格式</h3>
+        <p>支持输出 MP3 音频和 SRT 字幕文件，方便集成到各类项目中。</p>
+      </div>
+    </div>
+
+    <div class="reveal" style="margin-top: 1.5rem;">
+      <div class="code-block">
+        <div class="code-header">
+          <span>Terminal</span>
+          <button class="code-copy" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制
+          </button>
+        </div>
+        <pre><code><span class="comment"># 使用阿拉伯语 (埃及) 语音生成音频</span>
+<span class="cmd">$</span> edge-tts <span class="flag">--voice</span> ar-EG-SalmaNeural <span class="flag">--text</span> <span class="str">"مرحبا كيف حالك؟"</span> <span class="flag">--write-media</span> hello_arabic.mp3 <span class="flag">--write-subtitles</span> hello_arabic.srt</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Python 模块 -->
+  <section id="python">
+    <div class="reveal">
+      <span class="section-label">开发者</span>
+      <h2 class="section-title">Python 模块集成</h2>
+      <p class="section-desc">除了命令行工具，你还可以直接在 Python 代码中导入和使用 edge-tts 模块，实现更灵活的集成。</p>
+    </div>
+
+    <div class="reveal" style="margin-bottom: 2.5rem;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="install-card">
+          <h3>
+            <span class="icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </span>
+            官方示例
+          </h3>
+          <p>项目自带的示例代码，涵盖常见的使用场景。</p>
+          <a href="https://github.com/rany2/edge-tts/tree/main/examples" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-size:0.88rem;text-decoration:none;font-weight:500;">
+            查看示例
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+        <div class="install-card">
+          <h3>
+            <span class="icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </span>
+            工具模块
+          </h3>
+          <p>内置的工具函数模块，简化常见操作。</p>
+          <a href="https://github.com/rany2/edge-tts/blob/main/src/edge_tts/util.py" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-size:0.88rem;text-decoration:none;font-weight:500;">
+            查看 util.py
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal">
+      <h3 style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; margin-bottom: 1rem;">使用 edge-tts 的项目</h3>
+      <div class="project-list">
+        <a href="https://github.com/hasscc/hass-edge-tts/blob/main/custom_components/edge_tts/tts.py" target="_blank" class="project-item">
+          <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <div>
+            <h4>hass-edge-tts</h4>
+            <p>Home Assistant 的 edge-tts 集成组件</p>
+          </div>
+        </a>
+        <a href="https://github.com/souzatharsis/podcastfy/blob/main/podcastfy/tts/providers/edge.py" target="_blank" class="project-item">
+          <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <div>
+            <h4>Podcastfy</h4>
+            <p>基于 AI 的播客生成工具，使用 edge-tts 作为 TTS 提供者</p>
+          </div>
+        </a>
+        <a href="https://github.com/yaph/tts-samples/blob/main/bin/create_sound_samples.py" target="_blank" class="project-item">
+          <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <div>
+            <h4>tts-samples</h4>
+            <p>MP3 语音样本合集，帮助你为项目挑选合适的语音</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      edge-tts — 基于 Microsoft Edge 在线文本转语音服务的 Python 模块<br>
+      <a href="https://github.com/rany2/edge-tts" target="_blank">GitHub</a> ·
+      <a href="https://pypi.org/project/edge-tts/" target="_blank">PyPI</a> ·
+      MIT License
+    </p>
+  </footer>
+
+  <script>
+    // 滚动显示动画
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // 导航高亮
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-links a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const top = section.offsetTop - 100;
+        if (scrollY >= top) current = section.getAttribute('id');
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) link.classList.add('active');
+      });
+    });
+
+    // 复制代码
+    function copyCode(btn) {
+      const codeBlock = btn.closest('.code-block');
+      const code = codeBlock.querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 已复制';
+        btn.style.color = 'var(--accent)';
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+          btn.style.color = '';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

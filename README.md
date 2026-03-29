@@ -1,5 +1,7 @@
 # edge-tts
 
+> 本文档汉化自 [https://github.com/rany2/edge-tts](https://github.com/rany2/edge-tts)
+
 `edge-tts` 是一个 Python 模块，允许你在 Python 代码或通过提供的 `edge-tts` / `edge-playback` 命令行工具中使用 Microsoft Edge 的在线文本转语音服务。无需安装 Microsoft Edge、Windows 或 API 密钥。
 
 ## 安装
